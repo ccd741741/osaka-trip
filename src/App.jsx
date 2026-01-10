@@ -1,162 +1,150 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { 
   MapPin, CloudSun, Plane, Hotel, Calendar, Navigation,
   Flame, Info, Phone, ShieldAlert, LifeBuoy, 
   Coins, X, Car, Utensils, ShoppingBag, Map, AlertCircle,
-  Palette, Check, Users, Eye, ArrowUp, Calculator
+  Palette, Check, Users, Eye, ArrowUp, Ticket, ChevronRight, Sparkles, Tag,
+  Share, PlusSquare, ZoomIn, ZoomOut, MoreHorizontal, ArrowDown, MousePointerClick, Calculator
 } from 'lucide-react';
 
 // --- 1. 主題配色定義 ---
 const THEMES = {
   rose: {
     name: "Rose Noir",
-    primary: "text-rose-500",      
-    light: "text-rose-400",        
-    bg: "bg-rose-600",             
+    primary: "text-rose-400",      
+    light: "text-rose-300",        
+    bg: "bg-rose-600",
+    bgGradient: "from-rose-600 to-pink-700",              
     bgHover: "hover:bg-rose-500",  
-    border: "border-rose-500",     
-    softBg: "bg-rose-900/10",      
-    glow: "shadow-[0_0_15px_-3px_rgba(225,29,72,0.6)]", 
+    border: "border-rose-500/50",      
+    softBg: "bg-rose-500/20",     
+    glow: "shadow-[0_0_20px_-5px_rgba(225,29,72,0.5)]", 
     selection: "selection:bg-rose-500/30" 
   },
   blue: {
-    name: "Cyber Blue",
-    primary: "text-blue-500",
-    light: "text-blue-400",
-    bg: "bg-blue-500",
-    bgHover: "hover:bg-blue-400",
-    border: "border-blue-500",
-    softBg: "bg-blue-900/10",
-    glow: "shadow-[0_0_15px_-3px_rgba(59,130,246,0.6)]",
+    name: "Classic Blue", 
+    primary: "text-blue-400", 
+    light: "text-blue-300",
+    bg: "bg-blue-600",
+    bgGradient: "from-blue-600 to-indigo-600", 
+    bgHover: "hover:bg-blue-500",
+    border: "border-blue-500/50",
+    softBg: "bg-blue-500/20",      
+    glow: "shadow-[0_0_20px_-5px_rgba(59,130,246,0.5)]", 
     selection: "selection:bg-blue-500/30"
   }
 };
 
-// --- 2. 輔助函式：產生 Google Maps 連結 ---
-const getMapLink = (query) => {
-  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`;
-};
+// --- 2. 優惠券設定區 ---
+const COUPON_LIST = [
+  { id: 1, name: "Bic Camera 優惠券", type: "image", image: "https://d1grca2t3zpuug.cloudfront.net/2025/06/biccameracoupontwhk-1787x2527-1750209030.webp" },
+  { id: 2, name: "唐吉訶德 優惠券", type: "link", link: "https://japanportal.donki-global.com/coupon/?ptcd=0020000103" },
+  { id: 3, name: "大國藥妝 優惠券", type: "image", image: "https://d1grca2t3zpuug.cloudfront.net/2023/08/daikokucoupon-1751874722.webp" }
+];
+
+// --- 3. 折扣按鈕設定 (New) ---
+const DISCOUNT_OPTIONS = [
+  { label: "9折", rate: 0.9, text: "免稅" },
+  { label: "85折", rate: 0.85, text: "免稅+5%" },
+  { label: "83折", rate: 0.83, text: "免稅+7%" }
+];
+
+const getMapLink = (query) => `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`;
 
 // --- 旅行資料配置 ---
 const TRAVEL_DATA = {
-  title: "OSAKA NOIR",
-  subtitle: "大阪滑雪買買買之旅",
+  title: "OSAKA 2026",
+  subtitle: "WINTER EXPEDITION",
   duration: "2026/01/16 — 01/20",
   emergency: [
-    { name: "警察局 (Police)", tel: "110", icon: <ShieldAlert size={18} /> },
-    { name: "救護車 (Ambulance)", tel: "119", icon: <LifeBuoy size={18} /> },
-    { 
-      name: "台灣駐大阪辦事處", 
-      tel: "+81-6-6443-8481", 
-      desc: "緊急專線: 090-8794-4568",
-      address: "大阪市北區中之島 2-3-18",
-      mapQuery: "台北駐大阪經濟文化辦事處"
-    }
+    { name: "警察局 (Police)", tel: "110", icon: <ShieldAlert size={20} /> },
+    { name: "救護車 (Ambulance)", tel: "119", icon: <LifeBuoy size={20} /> },
+    { name: "台灣駐大阪辦事處", tel: "+81-6-6443-8481", desc: "緊急專線: 090-8794-4568", address: "大阪市北區中之島 2-3-18", mapQuery: "台北駐大阪經濟文化辦事處" }
   ],
   flightGroups: [
-    {
-      id: 'tpe',
-      label: "TPE Group (Pick)",
-      currency: "TWD",
-      rate: 0.205,
-      outbound: { code: "GK50", desc: "TPE ➔ KIX", time: "02:30 - 06:00" },
-      inbound: { code: "IT213", desc: "KIX ➔ TPE", time: "19:55 - 22:30" }
-    },
-    {
-      id: 'hkg',
-      label: "HKG Group (Alfred)",
-      currency: "HKD",
-      rate: 0.0498,
-      outbound: { code: "HX614", desc: "HKG ➔ KIX", time: "09:35 - 14:05" },
-      inbound: { code: "HX613", desc: "KIX ➔ HKG", time: "20:05 - 23:40" }
-    }
+    { id: 'tpe', label: "TPE Group", currency: "TWD", rate: 0.215, outbound: { code: "GK50", desc: "TPE(T1) ➔ KIX", time: "02:30 - 06:00" }, inbound: { code: "IT213", desc: "KIX(T1) ➔ TPE", time: "18:55 - 21:15" } },
+    { id: 'hkg', label: "HKG Group", currency: "HKD", rate: 0.051, outbound: { code: "HX614", desc: "HKG(T1) ➔ KIX", time: "09:35 - 14:05" }, inbound: { code: "HX613", desc: "KIX(T1) ➔ HKG", time: "20:05 - 23:40" } }
   ],
   accommodations: [
-    { 
-      name: "Bande Hotel Osaka", 
-      tel: "+81-6-6651-1200",
-      checkIn: "2026-01-16 15:00", 
-      checkOut: "2026-01-19 10:00",
-      address: "大阪府大阪市住之江區粉浜1-5-1",
-      mapQuery: "Bande Hotel Osaka"
-    },
-    { 
-      name: "Candeo Hotels Osaka The Tower", 
-      tel: "+81-6-6136-3330",
-      checkIn: "2026-01-19 15:00", 
-      checkOut: "2026-01-20 11:00",
-      address: "大阪府大阪市北區堂島浜1-1-5",
-      mapQuery: "Candeo Hotels Osaka The Tower"
-    }
+    { name: "Bande Hotel Osaka", tel: "+81-6-6651-1200", checkIn: "01/16 15:00", checkOut: "01/19 10:00", address: "大阪府大阪市住之江區粉浜1-5-1", mapQuery: "Bande Hotel Osaka" },
+    { name: "Candeo Hotels Osaka The Tower", tel: "+81-6-6136-3330", checkIn: "01/19 15:00", checkOut: "01/20 11:00", address: "大阪府大阪市北區堂島浜1-1-5", mapQuery: "Candeo Hotels Osaka The Tower" }
   ],
   days: [
-    { 
-      id: 1, date: "2026-01-16", label: "Day 1", location: "難波 / 日本橋",
-      schedule: [
-        { type: "spot", name: "尚未出發", description: "期待明日 (01/17) 出發前往大阪！", time: "00:00", group: "hkg" },
-        { type: "hotel", name: "Bande Hotel Osaka", description: "前往飯店寄放行李", time: "09:00", group: "tpe" },
-        { type: "spot", name: "木津市場", description: "體驗當地海鮮與市場文化", time: "10:30", group: "tpe" },
-        // 加入 ID 以供邏輯識別
-        { id: "noodle_spot", type: "restaurant", name: "天下一品 難波店", description: "極濃郁拉麵 (若超過11:30將與難波公園互換)", time: "11:00", group: "tpe" },
-        { id: "park_spot", type: "shopping", name: "難波公園 (Alpen Outdoors)", description: "購買 HOKA 鞋款 (3F)", tags: ["最高優先", "必買"], time: "12:30", group: "tpe" },
-        { type: "shopping", name: "安利美特 大阪日本橋店", description: "小說周邊巡禮", time: "14:30", group: "tpe" },
-        { type: "shopping", name: "駿河屋 大阪日本橋店", description: "模型與遊戲尋寶", time: "16:00", group: "tpe" },
-        { type: "shopping", name: "Bic Camera 難波店", description: "電器與 3C 用品", time: "17:30", group: "tpe" },
-        { type: "spot", name: "道頓堀 - 戎橋", description: "固力果跑跑人打卡", time: "19:00", group: "tpe" },
-        { type: "restaurant", name: "炭火燒寢床 心齋橋本店", description: "晚餐：精緻炭火燒肉", tags: ["尚未預約"], time: "20:00", group: "tpe" },
-        { type: "hotel", name: "回飯店", description: "休息並整理戰利品", time: "22:00", group: "tpe" }
+    { id: 1, date: "01/16 (週五)", label: "Day 1", location: "難波 / 道頓堀", schedule: [
+        { type: "hotel", name: "還沒輪到我們 嗚嗚嗚~~~", description: "明日搭乘HX614前往大阪", group: "hkg" },
+        { type: "plane", name: "抵達大阪關西", description: "GK50 抵達, 入境手續", group: "tpe" },
+        { type: "hotel", name: "Bande Hotel OSAKA", description: "辦理行李寄放，展開行程", group: "tpe" },
+        { type: "spot", name: "木津市場", description: "大阪人的廚房，體驗當地早市與現剖海鮮", group: "tpe" },
+        { id: "noodle_spot", type: "restaurant", name: "天下一品 難波ウインズ前店", description: "日本傳奇濃郁系雞白湯拉麵", group: "tpe" },
+        { id: "park_spot", type: "shopping", name: "難波公園 (Namba Parks)", description: "都市森林綠建築，Alpen Outdoors 必買 HOKA 鞋款", tags: ["必買", "3F"], group: "tpe" },
+        { type: "shopping", name: "Bic Camera 難波店", description: "大型電器賣場，一站式採買家電、藥妝與玩具", group: "tpe" },
+        { type: "spot", name: "道頓堀 - 戎橋", description: "大阪代表性地標，與固力果跑跑人看板拍照", group: "tpe" },
+        { type: "restaurant", name: "炭火燒寢床 心齋橋本店", description: "精緻炭火燒烤料理晚餐", group: "tpe" },
+        { type: "hotel", name: "Bande Hotel", description: "辦理入住手續並稍作休息", group: "tpe" },
+        { type: "restaurant", name: "炭火燒鳥 一燃", description: "道地日式燒鳥串燒宵夜", group: "tpe" }
       ]
     },
-    { 
-      id: 2, date: "2026-01-17", label: "Day 2", location: "新世界 / 心齋橋",
-      schedule: [
-        { type: "spot", name: "未定行程", description: "早晨自由活動", time: "09:00", group: "tpe" },
-        { type: "spot", name: "等待會合", description: "等待香港組抵達飯店", tags: ["會合"], time: "14:30", group: "tpe" },
-        { type: "plane", name: "抵達關西機場", description: "HX614 (14:05) 降落", tags: ["Arrival"], time: "14:05", group: "hkg" },
-        { type: "hotel", name: "前往飯店 Check-in", description: "前往 Bande Hotel 放行李/入住", time: "15:15", group: "hkg" },
-        { type: "spot", name: "兩組大會合", description: "TPE & HKG 全員集合！", tags: ["重要"], time: "15:30" },
-        { type: "spot", name: "大阪通天閣", description: "俯瞰大阪街景", time: "16:00" }, 
-        { type: "spot", name: "大阪新世界", description: "體驗昭和氣息炸串", time: "17:00" },
-        { type: "shopping", name: "心齋橋筋商店街", description: "藥妝與流行服飾", time: "18:30" },
-        { type: "shopping", name: "大國藥妝 心齋橋店", description: "採買藥妝補貨", time: "19:30" },
-        { type: "hotel", name: "回飯店", description: "回 Bande Hotel", time: "21:30" }
+    { id: 2, date: "01/17 (週六)", label: "Day 2", location: "全員集合 / 新世界", schedule: [
+        { type: "explore", name: "自由活動", description: "TPE組上午自由探索周邊街區", group: "tpe" },
+        { type: "plane", name: "HKG組 出發", description: "HX614 前往大阪", group: "hkg" },
+        { type: "plane", name: "HKG組 抵達", description: "預計抵達關西機場", group: "hkg" },
+        { type: "hotel", name: "Bande Hotel", description: "寄放行李與辦理手續", group: "hkg" },
+        { type: "spot", name: "全員集合", description: "集合地點為餐廳", tags: ["集合"], time: "16:45" },
+        { type: "restaurant", name: "yakinikuen 忍鬨(ニング) 総本店", description: "IG爆紅名店，必吃招牌厚切蔥花牛舌", tags: ["預約"], time: "16:45" },
+        { type: "spot", name: "大阪通天閣", description: "新世界地標，俯瞰昭和風情的老街景色"},
+        { type: "spot", name: "大阪新世界", description: "感受懷舊昭和氛圍，體驗充滿活力的大阪街頭文化"},
+        { type: "shopping", name: "心齋橋", description: "大阪最核心購物商圈，聚集各式服飾品牌與百貨"},
+        { type: "shopping", name: "大國藥妝 難波中三町目店", description: "價格極具競爭力的連鎖藥妝採買點"},
+        { type: "hotel", name: "回飯店", description: "返回 Bande Hotel Osaka 休息"}
       ]
     },
-    { 
-      id: 3, date: "2026-01-18", label: "Day 3", location: "六甲山滑雪",
-      schedule: [
-        { type: "explore", name: "六甲山滑雪集合", description: "【8:00集合】JR 難波站 OCAT 大廈 1F", tags: ["最高優先", "準時"], time: "08:00" },
-        { type: "explore", name: "六甲山雪地樂園", description: "一整天的滑雪與雪地體驗", time: "10:00" },
-        { type: "hotel", name: "回飯店", description: "滑雪後放鬆休息", time: "19:00" }
+    { id: 3, date: "01/18 (週日)", label: "Day 3", location: "六甲山 / 神戶", schedule: [
+        { type: "explore", name: "JR 難波站 OCAT 大廈 1F", description: "六甲山滑雪集合 集合點", tags: ["準時", "08:00"], time: "08:00" },
+        { type: "explore", name: "六甲山雪地樂園", description: "關西近郊著名滑雪場，體驗戲雪與滑雪樂趣", tags: ["Snow"]},
+        { type: "shopping", name: "神戶三田 Outlets", description: "西日本最大級 Outlet，美式風格建築與精品折扣"},
+        { type: "spot", name: "阿倍野展望台 HARUKAS", description: "日本第一高樓，坐擁 360 度無死角大阪百萬夜景"},
+        { type: "restaurant", name: "Cafe Dining Bar Sky Garden", description: "高空景觀餐廳，邊享用晚餐邊欣賞城市光影"},
+        { type: "shopping", name: "MEGA唐吉軻德 新世界店", description: "超大型驚安殿堂，種類最齊全的深夜購物天堂"},
+        { type: "restaurant", name: "鳥貴族 玉出店", description: "平價均一價串燒，老司機激推必點炸雞皮"},
+        { type: "hotel", name: "回飯店", description: "返回飯店休息"}
       ]
     },
-    { 
-      id: 4, date: "2026-01-19", label: "Day 4", location: "市區自駕移防",
-      schedule: [
-        { type: "explore", name: "租車自駕", description: "領取租賃車輛", time: "10:00" },
-        { type: "hotel", name: "Candeo Hotels 入住", description: "15:00 進房，享受露天浴池", time: "15:00" }
+    { id: 4, date: "01/19 (週一)", label: "Day 4", location: "京都自駕", schedule: [
+        { type: "hotel", name: "Bande Hotel 退房", description: "完成退房手續，準備開啟自駕之旅", time: "09:30" },
+        { type: "hotel", name: "Candeo Hotels 寄行李", description: "前往光芒酒店寄放行李", group: "transfer" },
+        { type: "explore", name: "租車 / 出發", description: "取車並前往京都，展開古都探索計畫"},
+        { type: "spot", name: "北野天滿神社", description: "祈求學業與智慧，可俯瞰京都街道風景", note: "🅿️ 導航：一之鳥居" },
+        { type: "spot", name: "花見小路 (南側)", description: "京都著名藝伎區，石板路與紅殼格子建築交織"},
+        { type: "spot", name: "一年坂", description: "充滿京都韻味的古老街道與職人小店散策"},
+        { type: "spot", name: "伏見稻荷大社", description: "壯觀的千本鳥居，京都最具代表性的神社景觀"},
+        { type: "shopping", name: "新京極薬品", description: "京都鬧區傳統藥妝店，採購熱門品項"},
+        { type: "explore", name: "大阪還車", description: "結束自駕行程返回大阪市區還車"},
+        { type: "hotel", name: "Candeo Hotels Check-in", description: "享受頂樓露天浴池與精緻住宿空間"}
       ]
     },
-    { 
-      id: 5, date: "2026-01-20", label: "Day 5", location: "返程",
-      schedule: [
-        { type: "hotel", name: "飯店退房", description: "11:00 前完成退房", time: "10:00" },
-        { type: "explore", name: "最後採買/午餐", description: "前往機場前最後巡禮", time: "12:00" },
-        { type: "plane", name: "旅程結束 (TPE)", description: "IT213 (19:55 起飛)", tags: ["Go Home"], time: "17:00", group: "tpe" },
-        { type: "plane", name: "旅程結束 (HKG)", description: "HX613 (20:05 起飛)", tags: ["Go Home"], time: "17:00", group: "hkg" }
+    { id: 5, date: "01/20 (週二)", label: "Day 5", location: "返程 / 臨空城", schedule: [
+        { type: "hotel", name: "飯店退房", description: "悠閒享用早餐後辦理退房手續", time: "11:30" },
+        { type: "spot", name: "大鳥大社", description: "千年古社參拜，體驗大鳥造建築之美"},
+        { type: "shopping", name: "臨空城 Rinku Outlet", description: "離日最後衝刺，海濱風格的精品折扣中心"},
+        { type: "plane", name: "前往關西機場", description: "前往機場航廈辦理報到手續", group: "tpe" },
+        { type: "plane", name: "IT213 起飛", description: "搭乘虎航班機，帶著滿滿回憶返家", tags: ["Go Home"], group: "tpe" },
+        { type: "plane", name: "前往關西機場", description: "HKG組抵達機場辦理報到", time: "18:00", group: "hkg" },
+        { type: "plane", name: "HX613 起飛", description: "搭乘香港航空班機返家", tags: ["Go Home"], group: "hkg" }
       ]
     }
   ]
 };
 
-const TypeIcon = ({ type }) => {
+const TypeIcon = ({ type, activeTheme }) => {
+  const iconProps = { size: 18, strokeWidth: 1.5 };
   switch (type) {
-    case 'hotel': return <Hotel size={14} />;
-    case 'restaurant': return <Utensils size={14} />;
-    case 'shopping': return <ShoppingBag size={14} />;
-    case 'explore': return <Car size={14} />;
-    case 'plane': return <Plane size={14} />;
-    default: return <Map size={14} />;
+    case 'hotel': return <Hotel {...iconProps} className="text-indigo-400" />;
+    case 'restaurant': return <Utensils {...iconProps} className="text-orange-400" />;
+    case 'shopping': return <ShoppingBag {...iconProps} className="text-pink-400" />;
+    case 'explore': return <Car {...iconProps} className="text-emerald-400" />;
+    case 'plane': return <Plane {...iconProps} className="text-sky-400" />;
+    case 'spot': return <MapPin {...iconProps} className={activeTheme.primary} />;
+    default: return <Map {...iconProps} className="text-zinc-500" />;
   }
 };
 
@@ -165,10 +153,17 @@ export default function TravelApp() {
   const [selectedDayIndex, setSelectedDayIndex] = useState(0);
   const [jpyInput, setJpyInput] = useState("");
   const [isMorning, setIsMorning] = useState(true);
-  
+  const [activeCoupon, setActiveCoupon] = useState(null);
+  const [isZoomed, setIsZoomed] = useState(false);
   const inputRef = useRef(null);
   const [activeGroup, setActiveGroup] = useState('tpe'); 
   const [currentTheme, setCurrentTheme] = useState('blue');
+  const [isIOSBrowser, setIsIOSBrowser] = useState(false);
+  const [checked, setChecked] = useState(false);
+  
+  // New State for Discount
+  const [discountRate, setDiscountRate] = useState(1); // 1 = no discount
+
   const theme = THEMES[currentTheme];
 
   const [weatherState, setWeatherState] = useState({
@@ -176,12 +171,18 @@ export default function TravelApp() {
   });
 
   useEffect(() => {
+    const ua = window.navigator.userAgent;
+    const isIOS = /iPad|iPhone|iPod/.test(ua) && !window.MSStream;
+    const isStandalone = window.navigator.standalone === true || window.matchMedia('(display-mode: standalone)').matches;
+    const isSafari = isIOS && /Safari/.test(ua) && !/CriOS/.test(ua) && !/FxiOS/.test(ua);
+    if (isSafari && !isStandalone) setIsIOSBrowser(true);
+    setChecked(true);
+  }, []);
+
+  useEffect(() => {
     const fetchWeather = async () => {
       try {
-        const res = await fetch(
-          'https://api.open-meteo.com/v1/forecast?latitude=34.6937&longitude=135.5023&current_weather=true&daily=temperature_2m_max,temperature_2m_min&timezone=Asia%2FTokyo'
-        );
-        if (!res.ok) throw new Error("API Error");
+        const res = await fetch('https://api.open-meteo.com/v1/forecast?latitude=34.6937&longitude=135.5023&current_weather=true&daily=temperature_2m_max,temperature_2m_min&timezone=Asia%2FTokyo');
         const data = await res.json();
         setWeatherState({
           current: Math.round(data.current_weather.temperature),
@@ -200,513 +201,438 @@ export default function TravelApp() {
 
   useEffect(() => {
     const now = new Date();
-    // 判斷是否為上午 (Demo 邏輯)
-    if (now.getHours() > 11 || (now.getHours() === 11 && now.getMinutes() >= 30)) {
-      setIsMorning(false);
-    }
+    if (now.getHours() > 11 || (now.getHours() === 11 && now.getMinutes() >= 30)) setIsMorning(false);
   }, []);
 
+  // 優化切換：延遲聚焦避開動畫卡頓
   useEffect(() => {
     if (activeTab === 'currency' && inputRef.current) {
       const timer = setTimeout(() => {
         inputRef.current.focus();
-      }, 100);
+      }, 300);
       return () => clearTimeout(timer);
     }
   }, [activeTab]);
 
-  // --- 優化後：處理行程 (Robust Swap Logic) ---
-  const processSchedule = (schedule) => {
-    // 1. 先過濾群組
-    const filteredSchedule = schedule.filter(item => !item.group || item.group === activeGroup);
-
-    // 2. 處理特定行程交換 (使用 ID 識別，安全性提升)
-    if (selectedDayIndex === 0 && activeGroup === 'tpe') {
-      const noodleIdx = filteredSchedule.findIndex(i => i.id === "noodle_spot");
-      const parkIdx = filteredSchedule.findIndex(i => i.id === "park_spot");
-
-      // 只有當兩個 ID 都存在且現在不是早上時，才進行交換
-      if (noodleIdx !== -1 && parkIdx !== -1 && !isMorning) {
-        // 建立新陣列以避免修改原始資料
-        const newSchedule = [...filteredSchedule];
-        
-        // 交換位置
+  const displayedSchedule = useMemo(() => {
+    const currentDay = TRAVEL_DATA.days[selectedDayIndex];
+    let schedule = currentDay.schedule.filter(item => !item.group || item.group === activeGroup);
+    
+    if (selectedDayIndex === 0 && activeGroup === 'tpe' && !isMorning) {
+      const noodleIdx = schedule.findIndex(i => i.id === "noodle_spot");
+      const parkIdx = schedule.findIndex(i => i.id === "park_spot");
+      if (noodleIdx !== -1 && parkIdx !== -1) {
+        const newSchedule = [...schedule];
         [newSchedule[noodleIdx], newSchedule[parkIdx]] = [newSchedule[parkIdx], newSchedule[noodleIdx]];
-        
-        // 更新註記 (找到換位置後的拉麵行程)
-        const newNoodleItem = newSchedule.find(i => i.id === "noodle_spot");
-        if(newNoodleItem) {
-             // 這裡使用 map 來產生新物件，避免汙染原始 TRAVEL_DATA
-             return newSchedule.map(item => {
-                 if (item.id === "noodle_spot") {
-                     return { ...item, note: "⚠️ 時間已過 11:30，行程已自動與難波公園對調" };
-                 }
-                 return item;
-             });
-        }
-        return newSchedule;
+        return newSchedule.map(item => item.id === "noodle_spot" ? { ...item, note: "⚠️ 時間已過 11:30，行程已自動優化" } : item);
       }
     }
-    return filteredSchedule;
-  };
-
-  const currentDay = TRAVEL_DATA.days[selectedDayIndex];
-  const displayedSchedule = processSchedule(currentDay.schedule);
-  const displayedFlightGroups = TRAVEL_DATA.flightGroups.filter(g => g.id === activeGroup);
+    return schedule;
+  }, [selectedDayIndex, activeGroup, isMorning]);
 
   const currentGroupData = TRAVEL_DATA.flightGroups.find(g => g.id === activeGroup);
-  const homeCurrency = currentGroupData ? currentGroupData.currency : 'TWD';
-  const exchangeRate = currentGroupData ? currentGroupData.rate : 0.205;
-  const convertedHome = jpyInput ? (Number(jpyInput) * exchangeRate) : 0;
-  const quickAmounts = [1000, 3000, 5000, 10000, 30000];
+  const displayedFlightGroups = TRAVEL_DATA.flightGroups.filter(g => g.id === activeGroup); // 補回航班資料
+  const homeCurrency = currentGroupData?.currency || 'TWD';
+  const exchangeRate = currentGroupData?.rate || 0.215;
+  
+  // *** 更新計算邏輯：加入 DiscountRate ***
+  const convertedHome = jpyInput ? (Number(jpyInput) * discountRate * exchangeRate) : 0;
+  
+  // *** 取得目前折扣的顯示文字 ***
+  const currentDiscountInfo = DISCOUNT_OPTIONS.find(d => d.rate === discountRate);
 
   const handleClear = (e) => {
-    e.preventDefault(); 
+    e.preventDefault();
     setJpyInput("");
-    if (inputRef.current) {
-        inputRef.current.focus();
+    if (inputRef.current) inputRef.current.focus();
+  };
+
+  const toggleDiscount = (rate) => {
+    if (discountRate === rate) {
+      setDiscountRate(1); // 取消
+    } else {
+      setDiscountRate(rate); // 套用
     }
   };
 
-  const NAV_BUTTON_STYLE = `w-8 h-8 ${theme.bg} rounded-xl flex items-center justify-center text-white ${theme.glow} ${theme.bgHover} hover:scale-105 transition-all flex-shrink-0`;
+  const GLASS_PANEL = "bg-white/5 backdrop-blur-md border border-white/10 rounded-3xl";
+  const NAV_BUTTON_STYLE = `w-10 h-10 ${theme.softBg} rounded-full flex items-center justify-center ${theme.primary} ${theme.bgHover} hover:text-white transition-all flex-shrink-0 border border-white/5`;
+
+  if (!checked) return null;
+  if (isIOSBrowser) {
+      return (
+          <div className="w-full h-[100dvh] bg-black text-white flex flex-col items-center justify-center p-8 relative overflow-hidden">
+             <div className="absolute top-[-20%] left-[-20%] w-[500px] h-[500px] bg-blue-600 rounded-full blur-[150px] opacity-20 animate-pulse"></div>
+             
+             {/* --- 指向瀏覽器三個點的指示箭頭 (固定在右下角) --- */}
+             <div className="absolute bottom-0 right-1 flex flex-col items-center animate-bounce z-50 pointer-events-none">
+                <span className="text-[20px] font-bold text-blue-400 mb-1 tracking-widest uppercase">幹!按這裡!</span>
+                <ArrowDown size={32} className="text-blue-400 drop-shadow-[0_0_10px_rgba(59,130,246,0.8)]" strokeWidth={3} />
+             </div>
+
+             <div className="relative z-10 flex flex-col items-center text-center space-y-8 max-w-sm">
+                 <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-600 shadow-2xl flex items-center justify-center border border-white/10">
+                    <Plane size={40} className="text-white" />
+                 </div>
+                 <div>
+                     <h1 className="text-2xl font-bold tracking-widest uppercase mb-2">安裝 App</h1>
+                     <p className="text-zinc-400 text-sm">為了獲得最佳體驗，你給我他媽安裝應用程式到主螢幕</p>
+                  </div>
+
+                 <div className="bg-white/5 border border-white/10 rounded-3xl p-6 w-full space-y-4 backdrop-blur-md text-left">
+                    
+                    {/* Step 1: 按下右下角的三個點 */}
+                    <div className="flex items-center gap-4">
+                         <MoreHorizontal className="text-blue-400 shrink-0" size={28} />
+                         <div>
+                             <p className="text-xs text-zinc-500 font-bold uppercase">步驟 1</p>
+                             <p className="text-sm font-medium">點擊右下角的 <span className="text-blue-400 font-bold">選單 (三個點)</span></p>
+                         </div>
+                     </div>
+                     
+                     <div className="w-full h-[1px] bg-white/5"></div>
+                     
+                      {/* Step 2: 選擇分享 */}
+                     <div className="flex items-center gap-4">
+                         <Share className="text-blue-400 shrink-0" size={28} />
+                         <div>
+                             <p className="text-xs text-zinc-500 font-bold uppercase">步驟 2</p>
+                             <p className="text-sm font-medium">選擇並按下 <span className="text-white font-bold">分享按鈕</span></p>
+                         </div>
+                     </div>
+
+                     <div className="w-full h-[1px] bg-white/5"></div>
+
+                     {/* Step 2: 選擇加入主畫面 */}
+                     <div className="flex items-center gap-4">
+                         <PlusSquare className="text-blue-400 shrink-0" size={28} />
+                         <div>
+                             <p className="text-xs text-zinc-500 font-bold uppercase">步驟 3</p>
+                             <p className="text-sm font-medium">往下滑並選擇 <span className="text-white font-bold">加入主畫面</span></p>
+                         </div>
+                     </div>
+
+                     <div className="w-full h-[1px] bg-white/5"></div>
+
+                     {/* Step 3: 按下加入 (新增的步驟) */}
+                     <div className="flex items-center gap-4">
+                         <div className="w-7 h-6 flex items-center justify-center font-bold text-blue-400 text-sm">加入</div>
+                         <div>
+                             <p className="text-xs text-zinc-500 font-bold uppercase">步驟 4</p>
+                             <p className="text-sm font-medium">點擊右上角的 <span className="text-blue-400 font-bold">加入</span></p>
+                         </div>
+                     </div>
+                 </div>
+             </div>
+          </div>
+      );
+  }
 
   return (
-    <div className={`w-full h-screen bg-black text-zinc-400 font-sans flex justify-center overflow-hidden ${theme.selection}`}>
-      
-      <div className="w-full max-w-[430px] h-full bg-[#050505] shadow-2xl relative border-x border-zinc-900/50 flex flex-col">
+    <div className={`w-full h-[100dvh] bg-black text-zinc-300 font-sans flex justify-center overflow-hidden ${theme.selection}`}>
+      <div className="fixed inset-0 pointer-events-none">
+          <div className={`absolute bottom-[10%] w-[500px] h-[500px] ${theme.bg} rounded-full blur-[120px] opacity-10 animate-pulse`}></div>
+      </div>
+
+      <div className="w-full max-w-[430px] h-full relative z-10 flex flex-col bg-gradient-to-b from-black/50 to-black/90 shadow-2xl border-x border-white/5">
         
         {/* === Header === */}
-        <div className="relative h-[15vh] shrink-0 overflow-hidden group">
-          <img 
-            src="https://scontent-tpe1-1.xx.fbcdn.net/v/t39.30808-6/482205903_938142135190508_1121977906483293071_n.jpg?_nc_cat=106&ccb=1-7&_nc_sid=127cfc&_nc_ohc=CGlaI56rhMsQ7kNvwFqrezy&_nc_oc=AdltyA2jW0CoUD-8GGmG-VkwVMNUN6LB7gqV4Tm5bO5q1npPGp1jChWjNK94fqwYW6o&_nc_zt=23&_nc_ht=scontent-tpe1-1.xx&_nc_gid=7g5YMdxB-VutVBsbXwOLEQ&oh=00_AfmMbdwlhPkqm1MN-2Dy2IIncpWSD8T0sQHeAfLvJ0wVUA&oe=69514801" 
-            className="w-full h-full object-cover scale-105 group-hover:scale-100 transition-transform duration-1000 brightness-[0.4]" 
-            alt="Osaka" 
-          />
-          <div className="absolute inset-0 bg-gradient-to-t from-[#050505] via-transparent to-black/20" />
-          
-          <div className="absolute bottom-3 left-6 right-6">
-            <div className="flex justify-between items-end">
+        <div className="relative h-[16vh] shrink-0 overflow-hidden group">
+          <img src="https://scontent-tpe1-1.xx.fbcdn.net/v/t39.30808-6/482205903_938142135190508_1121977906483293071_n.jpg?_nc_cat=106&ccb=1-7&_nc_sid=127cfc&_nc_ohc=HgFzLzeTMlIQ7kNvwHMkpxi&_nc_oc=Adn_gO39-pv6AuApt7fjq2hipoMHbHe26R1tNWRxMvvZ41F_Oz4IBd7X671IOl1u_Eg&_nc_zt=23&_nc_ht=scontent-tpe1-1.xx&_nc_gid=Fk2t2Xxz12cNLVq5N5WZhA&oh=00_AfmGs6kPDZHO_8FHi9LQUa9KiRGfw8V7Fjqv4-Z0xCzuVg&oe=6953B2C1" className="w-full h-full object-cover opacity-60 transition-transform duration-[2s]" alt="Osaka" />
+          <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/20 to-[#050505]" />
+          <div className="absolute bottom-2 left-6 right-6 flex justify-between items-end">
               <div>
-                <p className={`text-[9px] tracking-[0.3em] ${theme.light} font-bold mb-1 uppercase`}>Winter 2026 for Pick</p>
-                <h1 className="text-2xl font-light text-white tracking-widest uppercase">{TRAVEL_DATA.title}</h1>
-                <p className="text-[10px] text-zinc-400 mt-0.5 tracking-wider">{TRAVEL_DATA.subtitle}</p>
+                <span className="text-[9px] tracking-[0.2em] px-2 py-0.5 rounded-full border border-white/20 bg-white/5 text-white/80 uppercase">Winter 2026</span>
+                <h1 className="text-3xl font-light text-white tracking-[0.2em] uppercase">{TRAVEL_DATA.title}</h1>
+                <p className="text-[10px] text-zinc-400 mt-1 tracking-widest uppercase flex items-center gap-1">{TRAVEL_DATA.subtitle} <ChevronRight size={10} /></p>
               </div>
-              
               <div className="text-right flex flex-col items-end">
-                 {weatherState.error ? (
-                   <>
-                     <AlertCircle size={18} className={`${theme.primary} mb-1`} />
-                     <p className={`text-[9px] font-mono ${theme.primary} tracking-wider whitespace-nowrap`}>
-                       {weatherState.error}
-                     </p>
-                   </>
-                 ) : weatherState.loading ? (
-                    <div className="flex items-center gap-2">
-                      <CloudSun size={18} className="text-zinc-400 animate-pulse" />
-                      <span className="text-xs font-mono text-zinc-400">...</span>
+                {weatherState.loading ? <CloudSun size={24} className="text-zinc-500 animate-pulse" /> : (
+                  <>
+                    <span className="text-4xl font-thin text-white leading-none tracking-tighter">{weatherState.current}°</span>
+                    <div className="flex gap-2 text-[10px] font-mono text-zinc-400 mt-1">
+                      <span className="text-orange-400 font-bold">H:{weatherState.max}°</span>
+                      <span className="text-sky-400 font-bold">L:{weatherState.min}°</span>
                     </div>
-                 ) : (
-                   <>
-                     <div className="flex items-center gap-2 text-zinc-400 mb-0.5">
-                       <CloudSun size={18} />
-                       <span className="text-xl font-light text-white font-mono tracking-tighter">
-                         {weatherState.current}°
-                       </span>
-                     </div>
-                     <div className="flex gap-2 text-[10px] font-mono text-zinc-400">
-                        <span className="flex items-center">
-                          <span className="text-orange-400 mr-0.5">H</span> {weatherState.max}°
-                        </span>
-                        <span className="flex items-center">
-                          <span className="text-blue-400 mr-0.5">L</span> {weatherState.min}°
-                        </span>
-                     </div>
-                   </>
-                 )}
+                  </>
+                )}
               </div>
-            </div>
           </div>
         </div>
 
-        {/* === Tab 1: 行程表 === */}
-        {activeTab === 'itinerary' && (
-          <div className="flex-1 overflow-y-auto no-scrollbar pb-32 animate-in">
-            <div className="sticky top-0 z-40 bg-[#050505]/90 backdrop-blur-md border-b border-zinc-900/50 pt-3 pb-2">
-              <div className="px-4 mb-2 flex items-center justify-between">
-                 <div className="flex items-center gap-1.5 opacity-60">
-                   <Eye size={10} className={theme.light} />
-                   <span className="text-[9px] font-mono uppercase text-zinc-400 tracking-wider">
-                     View: <span className={theme.light}>{activeGroup.toUpperCase()} Group</span>
-                   </span>
+        {/* === Main Content Layers (優化卡頓關鍵) === */}
+        <div className="flex-1 relative overflow-hidden">
+          
+          {/* TAB: ITINERARY (使用 Visibility 避免銷毀 DOM) */}
+          <div className={`absolute inset-0 flex flex-col transition-all duration-300 ${activeTab === 'itinerary' ? 'opacity-100 z-10 translate-y-0' : 'opacity-0 z-0 translate-y-4 pointer-events-none'}`}>
+            <div className="sticky top-0 z-40 bg-[#050505]/80 backdrop-blur-xl border-b border-white/5 pt-4 pb-4">
+               <div className="px-5 mb-3 flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <div className={`w-1.5 h-1.5 rounded-full ${theme.bg} ${theme.glow}`}></div>
+                    <span className="text-[10px] font-bold uppercase text-zinc-400 tracking-widest">Group: <span className="text-white">{activeGroup}</span></span>
+                  </div>
+                  <div className="text-[10px] text-zinc-600 font-mono">{selectedDayIndex + 1} / {TRAVEL_DATA.days.length}</div>
+               </div>
+               <div className="flex overflow-x-auto no-scrollbar px-5 gap-3 pb-1 snap-x">
+                 {TRAVEL_DATA.days.map((day, idx) => (
+                   <button key={idx} onClick={() => setSelectedDayIndex(idx)} className={`snap-start flex-shrink-0 px-5 py-2.5 rounded-full text-xs font-bold transition-all border ${selectedDayIndex === idx ? 'bg-white text-black border-white scale-105' : 'bg-zinc-900/40 border-zinc-800 text-zinc-500'}`}>{day.label}</button>
+                 ))}
+               </div>
+            </div>
+            <div className="flex-1 overflow-y-auto no-scrollbar p-5 pb-36">
+              <div className="flex items-end justify-between mb-8 ml-1">
+                 <div>
+                    <span className={`text-[10px] font-black ${theme.primary} uppercase tracking-widest block mb-1`}>Current Location</span>
+                    <h2 className="text-2xl text-white font-light tracking-wider">{TRAVEL_DATA.days[selectedDayIndex].location}</h2>
                  </div>
+                 <span className="text-xs text-zinc-500 font-mono bg-zinc-900/50 px-2 py-1 rounded border border-white/5">{TRAVEL_DATA.days[selectedDayIndex].date}</span>
               </div>
-              <div className="flex overflow-x-auto no-scrollbar px-4 gap-2 pb-1">
-                {TRAVEL_DATA.days.map((day, idx) => (
-                  <button 
-                    key={idx} 
-                    onClick={() => setSelectedDayIndex(idx)} 
-                    className={`flex-shrink-0 px-4 py-2 rounded-full text-[10px] font-bold transition-all border ${selectedDayIndex === idx ? 'bg-white text-black border-white' : 'bg-zinc-900/50 border-zinc-800 text-zinc-400'}`}>
-                    {day.label}
-                  </button>
+              <div className="relative space-y-8 pl-2">
+                <div className="absolute left-[7px] top-4 bottom-4 w-[1px] bg-gradient-to-b from-zinc-800 via-zinc-700 to-zinc-900/0"></div>
+                {displayedSchedule.map((item, idx) => (
+                  <div key={idx} className="relative pl-8 group">
+                    <div className={`absolute left-0 top-3 w-[15px] h-[15px] rounded-full border-[3px] border-[#050505] z-10 transition-all ${item.tags?.includes('最高優先') ? 'bg-gradient-to-tr from-orange-500 to-yellow-500 shadow-[0_0_10px_rgba(249,115,22,0.6)]' : 'bg-zinc-800 group-hover:bg-zinc-600'}`}></div>
+                    <div className={`${GLASS_PANEL} p-5 group-hover:border-white/20 transition-colors relative overflow-hidden`}>
+                      <div className="flex justify-between items-start mb-3 relative z-10">
+                        <div className="flex-1">
+                           <div className="flex items-center flex-wrap gap-2 mb-1.5">
+                             {item.time && <span className={`text-sm font-bold font-mono ${theme.primary}`}>{item.time}</span>}
+                             {item.tags?.map(tag => <span key={tag} className={`text-[9px] font-bold px-1.5 py-0.5 rounded-[4px] border border-white/10 ${theme.softBg} ${theme.light} uppercase`}>{tag}</span>)}
+                           </div>
+                           <h3 className="text-base text-white font-bold leading-tight">{item.name}</h3>
+                        </div>
+                        <a href={getMapLink(item.note?.includes("導航") ? item.note.split("：")[1] : item.mapQuery || item.name + " 大阪")} target="_blank" rel="noreferrer" className={NAV_BUTTON_STYLE}><Navigation size={16}/></a>
+                      </div>
+                      <div className="flex gap-4 items-start relative z-10">
+                        <div className="mt-0.5 shrink-0 opacity-80"><TypeIcon type={item.type} activeTheme={theme} /></div>
+                        <p className="text-sm text-zinc-400 font-light leading-relaxed">{item.description}</p>
+                      </div>
+                      {item.note && (
+                        <div className="mt-3 text-[11px] text-zinc-300 bg-black/30 px-3 py-2 rounded-lg border border-white/5 font-mono flex items-start gap-2">
+                          <Info size={12} className={`shrink-0 mt-[2px] ${theme.primary}`}/><span>{item.note}</span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
                 ))}
               </div>
             </div>
+          </div>
 
-            <div className="p-6">
-              <div className="flex items-center gap-2 mb-6">
-                 <MapPin size={14} className={theme.primary} />
-                 <h2 className="text-lg text-white font-light tracking-wide">{currentDay.location}</h2>
-                 <span className="text-[10px] text-zinc-600 font-mono ml-auto">{currentDay.date}</span>
-              </div>
-              
-              <div className="relative space-y-6 before:absolute before:left-[6px] before:top-2 before:bottom-2 before:w-[1px] before:bg-zinc-800">
-                {displayedSchedule.length > 0 ? (
-                  displayedSchedule.map((item, idx) => (
-                    <div key={idx} className="relative pl-6 group">
-                      <div className={`absolute left-0 top-1.5 w-3 h-3 rounded-full border-2 border-[#050505] z-10 ${item.tags?.includes('最高優先') ? theme.bg : 'bg-zinc-700'}`} />
-                      
-                      <div className="flex flex-col gap-1">
-                        <div className="flex justify-start items-baseline">
-                          {item.tags && (
-                            <div className="flex gap-1">
-                              {item.tags.map(tag => (
-                                <span key={tag} className={`text-[10px] bg-zinc-900 px-1.5 py-0.5 rounded ${theme.light} border border-zinc-800`}>{tag}</span>
-                              ))}
-                            </div>
-                          )}
-                        </div>
-                        
-                        <div className="bg-zinc-900/30 border border-zinc-800/40 rounded-xl p-4 hover:border-zinc-700 transition-all">
-                          <div className="flex justify-between items-start mb-1">
-                            <div className="flex items-center gap-2">
-                               <TypeIcon type={item.type} />
-                               <h3 className="text-sm text-zinc-200 font-bold">{item.name}</h3>
-                               {item.tags?.includes('最高優先') && <Flame size={12} className="text-orange-500 fill-orange-500" />}
-                            </div>
-                            
-                            {item.name !== "尚未出發" && (
-                              <a 
-                                // 修正後的 Maps 連結
-                                href={getMapLink(item.name + " 大阪")} 
-                                target="_blank" 
-                                rel="noreferrer" 
-                                className={NAV_BUTTON_STYLE} 
-                              >
-                                <Navigation size={14}/>
-                              </a>
-                            )}
-                          </div>
-                          <p className="text-[11px] text-zinc-400 leading-relaxed font-light">{item.description}</p>
-                          {item.note && (
-                             <p className="mt-2 text-[10px] text-orange-400 bg-orange-900/20 p-2 rounded border border-orange-900/30">{item.note}</p>
-                          )}
-                        </div>
+          {/* TAB: CURRENCY */}
+          <div className={`absolute inset-0 flex flex-col transition-all duration-300 ${activeTab === 'currency' ? 'opacity-100 z-10 translate-y-0' : 'opacity-0 z-0 translate-y-4 pointer-events-none'}`}>
+             <div className="flex-1 overflow-y-auto no-scrollbar pt-8 px-6 pb-36 bg-black">
+                <div className="flex items-center justify-between mb-3">
+                  <h2 className="text-white font-extralight text-3xl tracking-[0.2em] uppercase">Exchange</h2>
+                  <div className="px-3 py-1 bg-white/5 border border-white/10 rounded-full flex items-center gap-2">
+                    <div className={`w-1.5 h-1.5 rounded-full ${theme.bg} animate-pulse`}></div>
+                    <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider">Live Rate</span>
+                  </div>
+                </div>
+                <div className="space-y-6">
+                  <div>
+                    {/* *** UI變更: 增加折扣提示文字 *** */}
+                    <div className="flex items-center gap-2 mb-2">
+                      <label className={`text-[10px] font-bold ${theme.primary} uppercase tracking-[0.3em]`}>Converted ({homeCurrency})</label>
+                      {currentDiscountInfo && (
+                        <span className={`text-xs font-bold ${theme.bg} text-white px-2 py-0.5 rounded shadow-md animate-in`}>
+                          {currentDiscountInfo.text}
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex items-baseline gap-2">
+                      <div className="text-7xl font-thin text-white tracking-tighter">{convertedHome === 0 ? "0" : convertedHome.toLocaleString(undefined, { maximumFractionDigits: homeCurrency === 'HKD' ? 1 : 0 })}</div>
+                      <span className="text-xl font-light text-zinc-600">{homeCurrency}</span>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-4 opacity-20 my-2"><div className="h-[1px] bg-white flex-1"></div><ArrowUp size={16} /><div className="h-[1px] bg-white flex-1"></div></div>
+                  <div>
+                    <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-[0.3em] mb-2 block">Japanese Yen</label>
+                    <div className="flex items-center p-4 bg-white/5 rounded-2xl border border-white/10 focus-within:border-white/30 transition-all">
+                      <span className="text-xl font-light text-zinc-500 mr-4">¥</span>
+                      <input ref={inputRef} type="number" inputMode="decimal" value={jpyInput} onChange={e => setJpyInput(e.target.value)} placeholder="0" className="w-full bg-transparent text-3xl font-light text-white outline-none placeholder:text-zinc-800" />
+                      {jpyInput && <button onMouseDown={handleClear} className="w-8 h-8 rounded-full bg-zinc-800 text-zinc-400 flex items-center justify-center"><X size={14} /></button>}
+                    </div>
+                  </div>
+                  
+                  <div className="mt-6 space-y-4">
+                     {/* *** New Discount Buttons Section *** */}
+                     <span className="text-xs font-bold text-zinc-400 uppercase tracking-widest block">Quick Discount</span>
+                     <div className="grid grid-cols-3 gap-3 mb-6">
+                        {DISCOUNT_OPTIONS.map((option) => (
+                           <button 
+                             key={option.rate} 
+                             onClick={() => toggleDiscount(option.rate)}
+                             className={`py-3 rounded-xl text-sm font-bold border transition-all ${discountRate === option.rate ? `${theme.bg} border-${theme.name}-500 text-white shadow-lg` : 'bg-zinc-900 border-white/5 text-zinc-500 hover:bg-zinc-800'}`}
+                           >
+                             {option.label}
+                           </button>
+                        ))}
+                     </div>
+                     
+                     <span className="text-xs font-bold text-zinc-400 uppercase tracking-widest block">Exclusive Coupons</span>
+                     {COUPON_LIST.map((coupon) => (
+                        <button key={coupon.id} onClick={() => coupon.type === 'link' ? window.open(coupon.link, '_blank') : setActiveCoupon(coupon)} className="group relative w-full py-4 px-6 rounded-xl bg-zinc-900 border border-white/5 flex items-center justify-between">
+                           <div className="flex items-center gap-4">
+                              <div className={`w-10 h-10 rounded-full ${theme.softBg} flex items-center justify-center`}><Ticket size={18} className={theme.primary} /></div>
+                              <div className="text-left"><span className="block text-sm font-bold text-white">{coupon.name}</span><span className="block text-[10px] text-zinc-500 uppercase">{coupon.type === 'link' ? 'Website' : 'Show QR'}</span></div>
+                           </div>
+                           <ChevronRight size={16} className="text-zinc-600" />
+                        </button>
+                     ))}
+                  </div>
+                </div>
+             </div>
+          </div>
+
+          {/* TAB: INFO (已補回航班資訊) */}
+          <div className={`absolute inset-0 flex flex-col transition-all duration-300 ${activeTab === 'info' ? 'opacity-100 z-10 translate-y-0' : 'opacity-0 z-0 translate-y-4 pointer-events-none'}`}>
+             <div className="flex-1 overflow-y-auto no-scrollbar p-6 pb-36 space-y-8 bg-black">
+                <section className="space-y-4">
+                  <h2 className={`text-[10px] font-black ${theme.primary} tracking-[0.3em] uppercase flex items-center gap-2`}><ShieldAlert size={14} /> Emergency</h2>
+                  <div className="grid grid-cols-2 gap-4">
+                    {TRAVEL_DATA.emergency.slice(0, 2).map((item, idx) => (
+                      <a key={idx} href={`tel:${item.tel}`} className={`${GLASS_PANEL} p-5 flex flex-col items-center gap-2 active:scale-95 transition-all`}>
+                        <span className={theme.primary}>{item.icon}</span><span className="text-white font-thin text-3xl">{item.tel}</span><span className="text-[9px] text-zinc-400 font-bold uppercase">{item.name.split(' ')[0]}</span>
+                      </a>
+                    ))}
+                  </div>
+                </section>
+                <section className={`${GLASS_PANEL} p-1 flex items-center`}>
+                   <div className="grid grid-cols-2 w-full gap-1">
+                     {['tpe', 'hkg'].map((group) => (
+                       <button key={group} onClick={() => setActiveGroup(group)} className={`py-2.5 rounded-2xl text-[10px] font-bold uppercase transition-all flex items-center justify-center gap-2 ${activeGroup === group ? `${theme.bg} text-white` : 'text-zinc-500'}`}>
+                         {activeGroup === group && <Check size={12} />}{group} Group
+                       </button>
+                     ))}
+                   </div>
+                </section>
+                <section className={`${GLASS_PANEL} p-4 flex items-center justify-between`}>
+                    <div className="flex items-center gap-3"><Palette size={18} className={theme.primary} /><span className="text-xs font-bold text-zinc-300 uppercase">App Theme</span></div>
+                    <div className="flex gap-2">
+                      {Object.keys(THEMES).map(key => (
+                        <button key={key} onClick={() => setCurrentTheme(key)} className={`w-8 h-8 rounded-full border-2 ${currentTheme === key ? 'border-white scale-110' : 'border-transparent'}`} style={{backgroundColor: key === 'rose' ? '#e11d48' : '#3b82f6'}} />
+                      ))}
+                    </div>
+                </section>
+                <div className={`${GLASS_PANEL} p-6 space-y-4`}>
+                   <div className="flex justify-between items-start">
+                     <div><h3 className="text-zinc-100 font-bold text-base">台北駐大阪辦事處</h3><p className="text-[10px] text-zinc-400">{TRAVEL_DATA.emergency[2].address}</p></div>
+                     <a href={getMapLink(TRAVEL_DATA.emergency[2].mapQuery)} target="_blank" rel="noreferrer" className={NAV_BUTTON_STYLE}><Navigation size={16} /></a>
+                   </div>
+                   <a href={`tel:${TRAVEL_DATA.emergency[2].tel}`} className="flex items-center gap-4 bg-black/20 p-4 rounded-2xl border border-white/5">
+                     <div className={`w-10 h-10 rounded-xl bg-zinc-800 flex items-center justify-center text-white`}><Phone size={18} /></div>
+                     <div><p className="text-sm text-white font-mono">{TRAVEL_DATA.emergency[2].tel}</p><p className="text-[10px] text-zinc-500 uppercase">{TRAVEL_DATA.emergency[2].desc}</p></div>
+                   </a>
+                </div>
+                <section className="space-y-4">
+                  <h2 className="text-[10px] font-black text-zinc-500 uppercase flex items-center gap-2"><Hotel size={14} /> Accommodation</h2>
+                  {TRAVEL_DATA.accommodations.map((hotel, i) => (
+                    <div key={i} className={`${GLASS_PANEL} p-6 space-y-5`}>
+                      <div className="flex justify-between items-start">
+                        <div className="flex-1"><h3 className="text-zinc-100 font-bold text-base">{hotel.name}</h3><p className="text-[10px] text-zinc-500">{hotel.address}</p></div>
+                        <a href={getMapLink(hotel.mapQuery)} target="_blank" rel="noreferrer" className={NAV_BUTTON_STYLE}><MapPin size={16} /></a>
+                      </div>
+                      <div className="grid grid-cols-2 gap-4 pt-4 border-t border-white/5">
+                        <div><p className="text-[9px] text-zinc-500 uppercase font-black">Check In</p><p className={`text-sm ${theme.light} font-mono`}>{hotel.checkIn}</p></div>
+                        <div className="text-right"><p className="text-[9px] text-zinc-500 uppercase font-black">Check Out</p><p className={`text-sm ${theme.light} font-mono`}>{hotel.checkOut}</p></div>
                       </div>
                     </div>
-                  ))
-                ) : (
-                  <div className="pl-6 pt-4">
-                     <p className="text-xs text-zinc-600 font-mono">No events scheduled.</p>
+                  ))}
+                </section>
+                {/* 補回的航班資訊區塊 */}
+                <section className="space-y-4">
+                  <h2 className="text-[10px] font-black text-zinc-500 tracking-[0.3em] uppercase flex items-center gap-2">
+                    <Plane size={14} /> Flights Info
+                  </h2>
+                  <div className="grid grid-cols-1 gap-4">
+                    {displayedFlightGroups.map((group, idx) => (
+                      <div key={idx} className="space-y-3">
+                        <div className="flex items-center gap-2 px-1">
+                          <Tag size={12} className={theme.primary} />
+                          <span className="text-[10px] font-bold text-white uppercase tracking-widest">{group.label}</span>
+                        </div>
+                        {/* Outbound */}
+                        <div className={`${GLASS_PANEL} p-4 flex justify-between items-center group hover:bg-white/10 transition-colors`}>
+                           <div className="flex items-center gap-4">
+                             <div className="w-8 h-8 rounded-full bg-zinc-800 flex items-center justify-center text-zinc-400">
+                                <Plane size={14} className="transform rotate-45" />
+                             </div>
+                             <div>
+                               <p className="text-base font-bold text-white">{group.outbound.code}</p>
+                               <p className="text-[10px] text-zinc-500">{group.outbound.desc}</p>
+                             </div>
+                           </div>
+                           <div className="text-right">
+                              <p className={`text-xs font-mono ${theme.light}`}>{group.outbound.time}</p>
+                           </div>
+                        </div>
+                        {/* Inbound */}
+                         <div className={`${GLASS_PANEL} p-4 flex justify-between items-center group hover:bg-white/10 transition-colors`}>
+                           <div className="flex items-center gap-4">
+                             <div className="w-8 h-8 rounded-full bg-zinc-800 flex items-center justify-center text-zinc-400">
+                                <Plane size={14} style={{ transform: 'rotate(-135deg)' }} />
+                             </div>
+                             <div>
+                               <p className="text-base font-bold text-white">{group.inbound.code}</p>
+                               <p className="text-[10px] text-zinc-500">{group.inbound.desc}</p>
+                             </div>
+                           </div>
+                           <div className="text-right">
+                              <p className={`text-xs font-mono ${theme.light}`}>{group.inbound.time}</p>
+                           </div>
+                        </div>
+                      </div>
+                    ))}
                   </div>
-                )}
-              </div>
-            </div>
+                </section>
+             </div>
+          </div>
+        </div>
+
+        {/* === Floating Navigation === */}
+        <div className="absolute bottom-8 left-1/2 -translate-x-1/2 w-auto z-[100]">
+            <nav className="bg-[#111]/80 backdrop-blur-2xl border border-white/10 rounded-full px-6 py-2 flex items-center gap-2 shadow-2xl">
+            {[
+                { id: 'itinerary', icon: Calendar, label: 'TRIP' },
+                { id: 'currency', icon: Coins, label: 'EXCH' },
+                { id: 'info', icon: Info, label: 'INFO' }
+            ].map(tab => {
+                const isActive = activeTab === tab.id;
+                return (
+                    <button key={tab.id} onClick={() => setActiveTab(tab.id)} className={`relative w-24 h-12 rounded-full flex flex-col items-center justify-center gap-1 transition-all duration-300 ${isActive ? 'text-white' : 'text-zinc-500'}`}>
+                        {isActive && <span className={`absolute bottom-[-10px] left-1/2 -translate-x-1/2 w-8 h-8 ${theme.bg} blur-xl opacity-40`}></span>}
+                        <tab.icon size={20} strokeWidth={isActive ? 2.5 : 2} className="relative z-10" />
+                        <span className="text-[8px] font-black tracking-widest relative z-10">{tab.label}</span>
+                    </button>
+                )
+            })}
+            </nav>
+        </div>
+
+        {/* === Coupon Modal === */}
+        {activeCoupon && (
+          <div className="absolute inset-0 z-[200] bg-black/90 backdrop-blur-md flex items-center justify-center p-6" onClick={() => { setActiveCoupon(null); setIsZoomed(false); }}>
+             <div className="relative w-full max-w-sm rounded-3xl overflow-hidden bg-[#151515] flex flex-col max-h-[80vh]" onClick={(e) => e.stopPropagation()}>
+                <div className={`relative flex-1 bg-white ${isZoomed ? 'overflow-auto' : 'overflow-hidden'}`}>
+                    <img src={activeCoupon.image} alt={activeCoupon.name} onClick={() => setIsZoomed(!isZoomed)} className={`object-contain transition-all origin-top-left ${isZoomed ? 'w-[200%] max-w-none' : 'w-full h-full'}`} />
+                    {!isZoomed && <div className="absolute top-4 right-4 bg-black/50 px-3 py-1.5 rounded-full flex items-center gap-2 text-white/90"><ZoomIn size={14} /><span className="text-[10px] font-bold uppercase">Tap to Zoom</span></div>}
+                </div>
+                <div className="p-6 text-center bg-[#151515] border-t border-white/5">
+                   <h3 className="text-lg font-bold text-white mb-1">{activeCoupon.name}</h3>
+                   <button onClick={() => { setActiveCoupon(null); setIsZoomed(false); }} className="mt-6 w-full py-3 rounded-xl bg-zinc-800 text-white text-xs font-bold uppercase">Close</button>
+                </div>
+             </div>
           </div>
         )}
-
-        {/* === Tab 2: 匯率 === */}
-        {activeTab === 'currency' && (
-          <div className="flex-1 overflow-y-auto no-scrollbar pt-6 px-6 pb-20 animate-in flex flex-col justify-between h-full">
-            
-            <div className="space-y-6">
-              <div className="flex items-center justify-between">
-                <h2 className="text-zinc-100 font-light text-2xl tracking-[0.2em] uppercase">Currency</h2>
-                <div className={`px-3 py-1 bg-zinc-900/50 border border-zinc-800 rounded-full flex items-center gap-2`}>
-                   <div className={`w-2 h-2 rounded-full ${theme.bg} animate-pulse`}></div>
-                   <span className="text-[10px] font-bold text-zinc-300">JPY to {homeCurrency}</span>
-                </div>
-              </div>
-
-              <div className="flex flex-col gap-4 mt-8">
-                <div className="relative">
-                  <label className={`text-[10px] font-bold ${theme.primary} uppercase tracking-widest mb-1 block`}>
-                    {homeCurrency === 'TWD' ? 'Taiwan Dollar' : 'Hong Kong Dollar'}
-                  </label>
-                  <div className={`text-6xl font-thin ${theme.light} font-sans`}>
-                    {convertedHome === 0 ? "0" : convertedHome.toLocaleString(undefined, { maximumFractionDigits: homeCurrency === 'HKD' ? 1 : 0 })}
-                  </div>
-                  <span className={`absolute right-0 bottom-4 ${theme.primary} text-sm font-light`}>{homeCurrency}</span>
-                </div>
-
-                <div className="flex items-center gap-4 opacity-30">
-                  <div className="h-[1px] bg-zinc-700 flex-1"></div>
-                  <ArrowUp size={16} />
-                  <div className="h-[1px] bg-zinc-700 flex-1"></div>
-                </div>
-
-                <div className="group relative">
-                  <label className="text-[10px] font-bold text-zinc-500 uppercase tracking-widest mb-1 block">Japanese Yen (Input)</label>
-                  <div className="flex items-center relative">
-                    <input 
-                      ref={inputRef}
-                      type="number" // 保持 number 方便計算
-                      inputMode="decimal" // 手機彈出數字鍵盤
-                      enterKeyHint="done" // 鍵盤顯示「完成」
-                      value={jpyInput} 
-                      onChange={e => setJpyInput(e.target.value)} 
-                      placeholder="0"
-                      // 加入 no-spinner class 隱藏預設箭頭
-                      className="w-full bg-transparent text-6xl font-thin text-white outline-none placeholder:text-zinc-800 font-sans pr-12 no-spinner" 
-                    />
-                    
-                    {jpyInput && (
-                      <button 
-                        onMouseDown={handleClear}
-                        className={`absolute right-0 top-1/2 -translate-y-1/2 w-8 h-8 rounded-full bg-zinc-800 text-zinc-400 flex items-center justify-center hover:bg-zinc-700 hover:text-white transition-all`}
-                        aria-label="Clear"
-                      >
-                        <X size={16} />
-                      </button>
-                    )}
-                  </div>
-                  <span className="absolute right-12 bottom-4 text-zinc-700 text-sm font-light mr-2">JPY</span>
-                </div>
-
-              </div>
-            </div>
-
-            <div className="bg-zinc-900/30 border border-zinc-800/50 rounded-2xl p-6 backdrop-blur-sm">
-              <div className="flex items-center gap-2 mb-4 opacity-70">
-                 <Calculator size={14} className={theme.primary} />
-                 <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider">Quick Price Look</span>
-              </div>
-              
-              <div className="space-y-3">
-                {quickAmounts.map(amt => (
-                  <div key={amt} className="flex justify-between items-center text-sm border-b border-zinc-800/50 last:border-0 pb-2 last:pb-0">
-                    <span className="text-zinc-500 font-mono">¥{amt.toLocaleString()}</span>
-                    <span className="text-zinc-300 font-bold font-mono">
-                      {(amt * exchangeRate).toLocaleString(undefined, { maximumFractionDigits: homeCurrency === 'HKD' ? 1 : 0 })}
-                      <span className="text-[9px] text-zinc-600 ml-1">{homeCurrency}</span>
-                    </span>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-          </div>
-        )}
-
-        {/* === Tab 3: 資訊 & 設定 === */}
-        {activeTab === 'info' && (
-          <div className="flex-1 overflow-y-auto no-scrollbar p-6 pb-32 animate-in space-y-8">
-            {/* 緊急電話 */}
-            <section className="space-y-4">
-              <h2 className={`text-xs font-black ${theme.primary} tracking-[0.3em] uppercase flex items-center gap-2`}>
-                <ShieldAlert size={14} /> Emergency
-              </h2>
-              <div className="grid grid-cols-2 gap-3">
-                {TRAVEL_DATA.emergency.slice(0, 2).map((item, idx) => (
-                  <a key={idx} href={`tel:${item.tel}`} className={`${theme.softBg} border ${theme.border} border-opacity-20 p-4 rounded-2xl flex flex-col items-center gap-1 active:scale-95 transition-transform`}>
-                    <span className={theme.primary}>{item.icon}</span>
-                    <span className="text-white font-black text-lg">{item.tel}</span>
-                    <span className={`text-[9px] ${theme.primary} opacity-70 font-bold uppercase`}>{item.name.split(' ')[0]}</span>
-                  </a>
-                ))}
-              </div>
-            </section>
-
-            {/* Group Toggle */}
-            <section className="bg-zinc-900/40 border border-zinc-800 p-2 rounded-2xl flex items-center justify-between relative overflow-hidden">
-               <div className={`absolute left-0 top-0 bottom-0 w-1 ${theme.bg}`} />
-               <div className="flex items-center gap-3 px-3">
-                 <Users size={16} className={theme.primary} />
-                 <span className="text-xs font-bold text-zinc-300 tracking-wider uppercase">View Group</span>
-               </div>
-               <div className="flex bg-black/40 rounded-xl p-1 gap-1">
-                 {['tpe', 'hkg'].map((group) => (
-                   <button
-                    key={group}
-                    onClick={() => setActiveGroup(group)}
-                    className={`
-                      px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase transition-all flex items-center gap-1
-                      ${activeGroup === group 
-                        ? `${theme.bg} text-white` 
-                        : 'text-zinc-500 hover:text-zinc-300 hover:bg-white/5'}
-                    `}
-                   >
-                     {activeGroup === group && <Check size={10} strokeWidth={4} />}
-                     {group.toUpperCase()}
-                   </button>
-                 ))}
-               </div>
-            </section>
-
-            {/* Theme Style */}
-            <section className="bg-zinc-900/40 border border-zinc-800 p-2 rounded-2xl flex items-center justify-between relative overflow-hidden">
-               <div className={`absolute left-0 top-0 bottom-0 w-1 ${theme.bg}`} />
-               <div className="flex items-center gap-3 px-3">
-                 <Palette size={16} className={theme.primary} />
-                 <span className="text-xs font-bold text-zinc-300 tracking-wider uppercase">Theme Style</span>
-               </div>
-               <div className="flex bg-black/40 rounded-xl p-1 gap-1">
-                 {['rose', 'blue'].map((mode) => (
-                   <button
-                    key={mode}
-                    onClick={() => setCurrentTheme(mode)}
-                    className={`
-                      px-3 py-1.5 rounded-lg text-[10px] font-bold uppercase transition-all flex items-center gap-1
-                      ${currentTheme === mode 
-                        ? (mode === 'rose' ? 'bg-rose-600 text-white shadow-lg shadow-rose-900/50' : 'bg-blue-500 text-white shadow-lg shadow-blue-900/50')
-                        : 'text-zinc-500 hover:text-zinc-300 hover:bg-white/5'}
-                    `}
-                   >
-                     {currentTheme === mode && <Check size={10} strokeWidth={4} />}
-                     {mode}
-                   </button>
-                 ))}
-               </div>
-            </section>
-
-            {/* 辦事處 */}
-            <div className="bg-zinc-900/40 border border-zinc-800 p-5 rounded-2xl space-y-3">
-               <div className="flex justify-between items-start">
-                  <div>
-                    <h3 className="text-zinc-200 font-bold text-sm">台北駐大阪經濟文化辦事處</h3>
-                    <p className="text-[10px] text-zinc-400 mt-1">{TRAVEL_DATA.emergency[2].address}</p>
-                  </div>
-                  <a 
-                    href={getMapLink(TRAVEL_DATA.emergency[2].mapQuery)} 
-                    target="_blank" 
-                    rel="noreferrer" 
-                    className={`${NAV_BUTTON_STYLE} ml-2`} 
-                  >
-                    <Navigation size={14} />
-                  </a>
-               </div>
-               <a href={`tel:${TRAVEL_DATA.emergency[2].tel}`} className="flex items-center gap-3 bg-black/20 p-3 rounded-xl border border-white/5 hover:bg-white/5 transition-colors">
-                  <div className={`w-8 h-8 rounded-lg ${theme.bg} flex items-center justify-center text-white`}><Phone size={14} /></div>
-                  <div>
-                    <p className="text-[11px] text-white font-mono">{TRAVEL_DATA.emergency[2].tel}</p>
-                    <p className="text-[9px] text-zinc-400 uppercase">{TRAVEL_DATA.emergency[2].desc}</p>
-                  </div>
-               </a>
-            </div>
-            
-            {/* Hotels */}
-            <section className="space-y-4">
-               <h2 className="text-xs font-black text-zinc-400 tracking-[0.3em] uppercase flex items-center gap-2">
-                <Hotel size={14} /> Hotels
-              </h2>
-              {TRAVEL_DATA.accommodations.map((hotel, i) => (
-                <div key={i} className="bg-zinc-900/40 border border-zinc-800 p-5 rounded-2xl space-y-4">
-                  <div className="flex justify-between items-start">
-                    <div className="flex-1">
-                      <h3 className="text-zinc-100 font-bold text-sm">{hotel.name}</h3>
-                      <p className="text-[10px] text-zinc-400 mt-1">{hotel.address}</p>
-                    </div>
-                    <div className="flex gap-2 ml-2">
-                        <a 
-                          href={getMapLink(hotel.mapQuery)} 
-                          target="_blank" 
-                          rel="noreferrer" 
-                          className={NAV_BUTTON_STYLE}
-                        >
-                           <MapPin size={14} />
-                        </a>
-                        <a href={`tel:${hotel.tel}`} className={`w-8 h-8 bg-zinc-800 rounded-xl flex items-center justify-center ${theme.primary} ${theme.bgHover} hover:text-white transition-colors`}>
-                           <Phone size={14} />
-                        </a>
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-2 gap-4 pt-4 border-t border-zinc-800/50">
-                    <div>
-                      <p className="text-[9px] text-zinc-400 uppercase font-black">Check In</p>
-                      <p className={`text-[11px] ${theme.light} font-mono mt-0.5`}>{hotel.checkIn}</p>
-                    </div>
-                    <div>
-                      <p className="text-[9px] text-zinc-400 uppercase font-black">Check Out</p>
-                      <p className={`text-[11px] ${theme.light} font-mono mt-0.5`}>{hotel.checkOut}</p>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </section>
-
-            {/* Flights */}
-            <section className="space-y-4">
-              <h2 className="text-xs font-black text-zinc-400 tracking-[0.3em] uppercase flex items-center gap-2">
-                <Plane size={14} /> Flights
-              </h2>
-              <div className="grid grid-cols-1 gap-6">
-                {displayedFlightGroups.map((group, idx) => (
-                  <div key={idx} className="space-y-3 animate-in">
-                    <div className="flex items-center gap-2 px-1">
-                      <Users size={12} className={theme.primary} />
-                      <span className="text-[10px] font-bold text-white uppercase tracking-wider">{group.label}</span>
-                    </div>
-                    <div className="bg-zinc-900/40 border border-zinc-800 p-4 rounded-2xl flex justify-between items-center">
-                       <div>
-                         <p className="text-[9px] text-zinc-400 uppercase font-black">Outbound</p>
-                         <p className="text-sm font-bold text-white mt-1">{group.outbound.code}</p>
-                         <p className="text-[10px] text-zinc-400">{group.outbound.desc}</p>
-                       </div>
-                       <div className="text-right">
-                          <p className={`text-xs font-mono ${theme.light}`}>{group.outbound.time}</p>
-                       </div>
-                    </div>
-                    <div className="bg-zinc-900/40 border border-zinc-800 p-4 rounded-2xl flex justify-between items-center">
-                       <div>
-                         <p className="text-[9px] text-zinc-400 uppercase font-black">Inbound</p>
-                         <p className="text-sm font-bold text-white mt-1">{group.inbound.code}</p>
-                         <p className="text-[10px] text-zinc-400">{group.inbound.desc}</p>
-                       </div>
-                       <div className="text-right">
-                          <p className={`text-xs font-mono ${theme.light}`}>{group.inbound.time}</p>
-                       </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </section>
-          </div>
-        )}
-
-        {/* === 懸浮導航 === */}
-        <nav className="absolute bottom-8 left-1/2 -translate-x-1/2 w-[90%] bg-[#111]/90 backdrop-blur-md border border-zinc-800 rounded-full px-6 py-4 flex justify-between items-center z-[100] shadow-2xl shadow-black/50">
-          {[
-            { id: 'itinerary', icon: Calendar, label: 'TRIP' },
-            { id: 'currency', icon: Coins, label: 'EXCH' },
-            { id: 'info', icon: Info, label: 'INFO' }
-          ].map(tab => (
-            <button 
-              key={tab.id} 
-              onClick={() => setActiveTab(tab.id)} 
-              className={`flex flex-col items-center gap-1 transition-all duration-300 ${activeTab === tab.id ? `${theme.primary} scale-105` : 'text-zinc-400 hover:text-zinc-400'}`}>
-              <tab.icon size={22} strokeWidth={activeTab === tab.id ? 2.5 : 2} />
-              <span className="text-[9px] font-black tracking-widest">{tab.label}</span>
-            </button>
-          ))}
-        </nav>
-
       </div>
       
-      {/* Global Style (新增 no-spinner) */}
       <style>{`
         body { background-color: #000000; margin: 0; padding: 0; }
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-        /* 移除 Number Input 的箭頭 */
-        .no-spinner::-webkit-outer-spin-button,
-        .no-spinner::-webkit-inner-spin-button {
-          -webkit-appearance: none;
-          margin: 0;
-        }
-        .no-spinner {
-          -moz-appearance: textfield;
-        }
-        @keyframes slideUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-        .animate-in { animation: slideUp 0.4s ease-out forwards; }
+        @keyframes slideUp { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
+        .animate-in { animation: slideUp 0.4s cubic-bezier(0.2, 0.8, 0.2, 1) forwards; will-change: transform, opacity; }
       `}</style>
     </div>
   );
