@@ -3,33 +3,33 @@
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/osaka-trip/vite.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
     
+    <!-- PWA 核心設定 -->
     <title>OSAKA NOIR 2026</title>
     <meta name="description" content="大阪滑雪買買買之旅智能助手" />
     <link rel="manifest" href="/osaka-trip/manifest.json" />
     <meta name="theme-color" content="#000000" />
 
+    <!-- iOS 專用設定 (重要！) -->
+    <!-- 1. 設定加入主畫面後的 App 名稱 -->
     <meta name="apple-mobile-web-app-title" content="Pick旅遊" />
+    <!-- 2. 設定開啟時是否隱藏 Safari 網址列 (全螢幕模式) -->
     <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-status-bar-style" content="black" />
+    <!-- 3. 設定狀態列顏色 (black-translucent 會讓背景延伸到最上方) -->
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <!-- 4. 設定 App 圖標 (建議使用 180x180 或 192x192 的 PNG) -->
     <link rel="apple-touch-icon" href="/osaka-trip/icon-192.png" />
 
+    <!-- 解決 iOS 點擊延遲與縮放問題 -->
     <style>
-      /* 確保背景強制為黑，不留任何藍色縫隙 */
-      html, body {
-        background-color: #000000 !important;
-        margin: 0;
-        padding: 0;
+      body {
         -webkit-tap-highlight-color: transparent;
         touch-action: manipulation;
       }
-      #root {
-        background-color: #000000;
-      }
     </style>
-    <script type="module" crossorigin src="/osaka-trip/assets/index-Blt9hL9T.js"></script>
-    <link rel="stylesheet" crossorigin href="/osaka-trip/assets/index-AdwELKWI.css">
+    <script type="module" crossorigin src="/osaka-trip/assets/index-D-fZjbRB.js"></script>
+    <link rel="stylesheet" crossorigin href="/osaka-trip/assets/index-Cf4aNBNo.css">
   </head>
   <body>
     <div id="root"></div>
