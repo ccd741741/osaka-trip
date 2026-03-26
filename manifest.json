@@ -1,7 +1,7 @@
 {
   "name": "Operation:Ditch Mung",
-  "short_name": "O D M",
-  "description": "Operation:Ditch Mung - 綠豆行動",
+  "short_name": "ODM",
+  "description": "Operation:Ditch Mung",
   "start_url": "/osaka-trip/",
   "scope": "/osaka-trip/",
   "display": "standalone",
